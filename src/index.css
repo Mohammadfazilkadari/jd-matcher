@@ -1,2 +1,18 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 @custom-variant dark (&:where(.dark, .dark *));
+
+.ring-progress {
+  animation: ring-fill 0.8s ease-out;
+}
+
+@keyframes ring-fill {
+  from {
+    stroke-dashoffset: var(--circ);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ring-progress {
+    animation: none;
+  }
+}
