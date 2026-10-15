@@ -6,6 +6,7 @@ import { sampleJD, sampleResume } from '@/data/sampleData';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { matchSkills } from '@/utils/matcher';
+import ThemeToggle from '@/components/ThemeToggle';
 
 function Message({ children }) {
   return (
@@ -47,7 +48,10 @@ function App() {
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <main className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-10 sm:px-6">
         <header className="flex flex-col gap-2">
-          <h1 className="text-3xl font-bold tracking-tight">JD Matcher</h1>
+          <div className="flex justify-between gap-4">
+            <h1 className="text-3xl font-bold tracking-tight">JD Matcher</h1>
+            <ThemeToggle />
+          </div>
           <p className="text-slate-600 dark:text-slate-400">
             Paste the job description and resume, see what skills match and Which ones are
             missing?
