@@ -1,12 +1,14 @@
 import { useMemo } from 'react';
 import { ShieldCheck } from 'lucide-react';
+import History from '@/components/History';
 import InputPanel from '@/components/InputPanel';
 import Results from '@/components/Results';
+import ThemeToggle from '@/components/ThemeToggle';
 import { sampleJD, sampleResume } from '@/data/sampleData';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { addEntry, createEntry, isSaved, removeEntry } from '@/utils/history';
 import { matchSkills } from '@/utils/matcher';
-import ThemeToggle from '@/components/ThemeToggle';
 
 function Message({ children }) {
   return (
@@ -17,22 +19,25 @@ function Message({ children }) {
 }
 
 function App() {
-  // Inputs are saved in LocalStorage; they do not disappear upon refresh.
   const [jd, setJd] = useLocalStorage('jdm:jd', '');
   const [resume, setResume] = useLocalStorage('jdm:resume', '');
+  const [history, setHistory] = useLocalStorage('jdm:history', []);
 
-  // Matching will run 500ms after typing stops.
+  // The app should not crash even if there is some incorrect data in the storage.
+  const entries = Array.isArray(history) ? history : [];
+
   const debouncedJd = useDebounce(jd, 500);
   const debouncedResume = useDebounce(resume, 500);
 
   const hasInput = debouncedJd.trim() !== '' && debouncedResume.trim() !== '';
   const isPending = jd !== debouncedJd || resume !== debouncedResume;
 
-  // Recalculate only when the debonded input changes.
   const result = useMemo(
     () => (hasInput ? matchSkills(debouncedJd, debouncedResume) : null),
     [hasInput, debouncedJd, debouncedResume],
   );
+
+  const saved = hasInput && isSaved(entries, debouncedJd, debouncedResume);
 
   const loadSample = () => {
     setJd(sampleJD);
@@ -44,17 +49,37 @@ function App() {
     setResume('');
   };
 
+  // Only those texts are saved whose score is visible on the screen.
+  const saveCheck = () => {
+    if (!result) return;
+    const entry = createEntry({ jd: debouncedJd, resume: debouncedResume, result });
+    setHistory((prev) => addEntry(Array.isArray(prev) ? prev : [], entry));
+  };
+
+  const loadEntry = (entry) => {
+    setJd(entry.jd);
+    setResume(entry.resume);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const deleteEntry = (id) =>
+    setHistory((prev) => removeEntry(Array.isArray(prev) ? prev : [], id));
+
+  const clearHistory = () => {
+    if (window.confirm('Do you want to delete all the history?')) setHistory([]);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <main className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-10 sm:px-6">
         <header className="flex flex-col gap-2">
-          <div className="flex justify-between gap-4">
+          <div className="flex items-start justify-between gap-4">
             <h1 className="text-3xl font-bold tracking-tight">JD Matcher</h1>
             <ThemeToggle />
           </div>
           <p className="text-slate-600 dark:text-slate-400">
-            Paste the job description and resume, see what skills match and Which ones are
-            missing?
+            Paste the job description and your resume to see which skills match and which
+            ones are missing.
           </p>
           <p className="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
             <ShieldCheck size={14} aria-hidden="true" />
@@ -78,7 +103,7 @@ function App() {
         >
           {!result && (
             <Message>
-              Paste the text into both boxes, or above. <strong>Try sample</strong> click.
+              Paste the text into both boxes, or above. <strong>Try sample</strong> Click.
             </Message>
           )}
 
@@ -89,8 +114,17 @@ function App() {
             </Message>
           )}
 
-          {result && result.totalSkills > 0 && <Results result={result} />}
+          {result && result.totalSkills > 0 && (
+            <Results result={result} onSave={saveCheck} saved={saved} />
+          )}
         </section>
+
+        <History
+          items={entries}
+          onLoad={loadEntry}
+          onDelete={deleteEntry}
+          onClearAll={clearHistory}
+        />
       </main>
     </div>
   );
